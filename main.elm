@@ -1,6 +1,7 @@
 module Main exposing (..)
 
 import Html exposing (..)
+import Html.Keyed as Keyed
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 
@@ -19,6 +20,7 @@ type Filter
 type alias Todo =
     { title : String
     , completed : Bool
+    , id : Int
     }
 
 
@@ -26,6 +28,7 @@ type alias Model =
     { newTodoTitle : String
     , todoList : List Todo
     , currentFilter : Filter
+    , prevId : Int
     }
 
 
@@ -36,10 +39,11 @@ type Msg
     | FilterChanged Filter
 
 
-createTodo : String -> Todo
-createTodo title =
+createTodo : String -> Int -> Todo
+createTodo title id =
     { title = title
     , completed = False
+    , id = id
     }
 
 
@@ -56,13 +60,13 @@ filterTodos todoList filter =
             (List.filter (\t -> not t.completed) todoList)
 
 
-todoListItem : Todo -> Html Msg
+todoListItem : Todo -> ( String, Html Msg )
 todoListItem todo =
     let
         ( completed, incomplete ) =
             statusCheckboxes todo
     in
-        li [] [ text todo.title, completed, incomplete ]
+        ( (toString todo.id), li [] [ text todo.title, completed, incomplete ] )
 
 
 statusCheckboxes : Todo -> ( Html Msg, Html Msg )
@@ -107,6 +111,7 @@ model =
     { newTodoTitle = ""
     , todoList = []
     , currentFilter = All
+    , prevId = 0
     }
 
 
@@ -122,6 +127,7 @@ update msg model =
             { model
                 | todoList = todo :: model.todoList
                 , newTodoTitle = ""
+                , prevId = model.prevId + 1
             }
 
         TodoStatusChanged todo ->
@@ -147,7 +153,7 @@ view model =
         [ h1 [] [ text "Create a Todo" ]
         , label [] [ text "Todo Title: " ]
         , input [ placeholder todoPlaceHolderText, onInput TodoTitleChange, value model.newTodoTitle ] []
-        , button [ onClick (TodoAdded (createTodo model.newTodoTitle)) ] [ text "Create Todo" ]
+        , button [ onClick (TodoAdded (createTodo model.newTodoTitle model.prevId)) ] [ text "Create Todo" ]
         , div []
             [ fieldset []
                 [ label []
@@ -157,5 +163,5 @@ view model =
                 , radio "Incomplete" Incomplete
                 ]
             ]
-        , ul [] (filterTodos model.todoList model.currentFilter |> List.map todoListItem)
+        , Keyed.ul [] (filterTodos model.todoList model.currentFilter |> List.map todoListItem)
         ]
